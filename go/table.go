@@ -19,9 +19,41 @@ func (t *Table) Offset(vtableOffset VOffsetT) VOffsetT {
 	return 0
 }
 
+// Offset provides access into the vtable of the provided buffer.
+func Offset(vtableOffset VOffsetT, offset UOffsetT, buf []byte) VOffsetT {
+	vtable := int32(len(buf) - int(offset))
+	return VOffsetT(int32(GetInt8(buf[vtable+int32(vtableOffset)-GetInt32(buf[vtable:]):])) + vtable)
+}
+
 // Indirect retrieves the relative offset stored at `offset`.
 func (t *Table) Indirect(off UOffsetT) UOffsetT {
 	return off + GetUOffsetT(t.Bytes[off:])
+}
+
+// Indirect retrieves the relative offset stored at `offset` in the provided buffer `buf`
+func Indirect(off UOffsetT, buf []byte) UOffsetT {
+	return off + GetUOffsetT(buf[off:])
+}
+
+// Compare compares the bytes at the provided offset in buffer `buf` with the provided key.
+func Compare(offset UOffsetT, key []byte, buf []byte) int {
+	offset += GetUOffsetT(buf[offset:])
+	len_1 := int(GetInt32(buf[offset:]))
+	len_2 := len(key)
+	startPos_1 := int(offset + SizeInt32)
+	len := len_1
+
+	if len_2 < len_1 {
+		len = len_2
+	}
+
+	for i := 0; i < len; i++ {
+		if buf[i+startPos_1] != key[i] {
+			return int(buf[i+startPos_1]) - int(key[i])
+		}
+	}
+
+	return len_1 - len_2
 }
 
 // String gets a string from data stored inside the flatbuffer.
